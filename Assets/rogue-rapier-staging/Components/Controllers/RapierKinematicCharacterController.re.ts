@@ -29,6 +29,8 @@ export default class RapierKinematicCharacterController extends RE.Component {
   rapierBodyComponent: RapierBody
   rapierConfig: RapierConfig
 
+  playerVelocity = new THREE.Vector3(0,0,0)
+
   //https://github.com/dimforge/rapier.js/blob/master/testbed3d/src/demos/characterController.ts
   awake() {
     this.rapierConfig = RE.getComponent(RapierConfig) as RapierConfig
@@ -80,41 +82,34 @@ export default class RapierKinematicCharacterController extends RE.Component {
     const gravity = this.rapierConfig.gravity
     const fixedStep = RE.Runtime.deltaTime
 
-    const playerVelocity = new THREE.Vector3(0, 0, 0)
-
     const scaledMovement = new THREE.Vector3(this.movementDirection.x, 0, this.movementDirection.z)
     scaledMovement.normalize()
 
-    playerVelocity.x = scaledMovement.x * this.speed
-    playerVelocity.z = scaledMovement.z * this.speed
+    this.playerVelocity.x = scaledMovement.x * this.speed
+    this.playerVelocity.z = scaledMovement.z * this.speed
     const nextPosition = this.rapierBodyComponent.body.translation()
-    const isGrounded = this.characterController.computedGrounded()
+    
 
-    if (isGrounded) {
-      RE.Debug.log(`grounded`)
-    }
-
-    if (isGrounded && playerVelocity.y != 0) {
-      playerVelocity.y = 0
-    }
-
-    if (isGrounded && this.movementDirection.y != 0) {
-      RE.Debug.log("jumping")
-      playerVelocity.y += Math.sqrt(
-        this.jumpHeight * 3 * (gravity.y * fixedStep),
-      )
-    }
-
-    playerVelocity.x += gravity.x * fixedStep
-    playerVelocity.y += gravity.y * fixedStep
-    playerVelocity.z += gravity.z * fixedStep
+    this.playerVelocity.x += gravity.x * fixedStep
+    this.playerVelocity.y += gravity.y * fixedStep
+    this.playerVelocity.z += gravity.z * fixedStep
 
     this.characterController.computeColliderMovement(
       this.rapierBodyComponent.body.collider(0),
-      playerVelocity,
+      this.playerVelocity,
     )
 
     const characterMovement = this.characterController.computedMovement()
+
+    const isGrounded = this.characterController.computedGrounded()
+
+    if (isGrounded && this.playerVelocity.y != 0) {
+      this.playerVelocity.y = 0
+    }
+
+    if (isGrounded && this.movementDirection.y != 0) {
+      this.playerVelocity.y = this.jumpHeight
+    }
 
     nextPosition.x += characterMovement.x
     nextPosition.y += characterMovement.y
